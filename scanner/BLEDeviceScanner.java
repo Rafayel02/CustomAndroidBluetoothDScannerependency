@@ -2,9 +2,7 @@ package am.threesmart.navio.bluetooth.scanner;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanFilter;
-import android.bluetooth.le.ScanSettings;
+import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.pm.PackageManager;
 
@@ -15,9 +13,9 @@ import java.util.Collections;
 
 import am.threesmart.navio.MainActivity;
 import am.threesmart.navio.bluetooth.checker.BluetoothChecker;
-import am.threesmart.navio.bluetooth.scanner.callback.ScannerCallBack;
-import am.threesmart.navio.bluetooth.scanner.filter.ScannerFilter;
-import am.threesmart.navio.bluetooth.scanner.settings.ScannerSettings;
+import am.threesmart.navio.bluetooth.model.BLEDevice;
+import am.threesmart.navio.bluetooth.scanner.filterandcallback.ScannerFilterSettings;
+import am.threesmart.navio.bluetooth.blefilter.Filter;
 
 
 //This class can be singleton also...
@@ -26,18 +24,16 @@ public final class BLEDeviceScanner implements BLEScanner {
     private Handler handler;
     private int scanPeriod;
     private int timeout = 0;
-    private long signalStrength;
     private boolean isScanning;
     private BluetoothAdapter adapter;
     private final MainActivity mainActivity;
+    private Filter filtration;
 
     //Bluetooth adapter scanner settings
-    private ScanCallback scanCallback;
-    private ScanFilter scanFilter;
-    private ScanSettings scanSettings;
+    private ScannerFilterSettings scannerFilterSettings;
     private Thread timeOutThread = null;
 
-    public BLEDeviceScanner(final MainActivity mainActivity, final int periodOfScanning, final long signalStrength) {
+    public BLEDeviceScanner(final MainActivity mainActivity, final int periodOfScanning, final Filter filtration) {
         if (periodOfScanning < 0) {
             throw new RuntimeException("Scanning period must b bigger than 0...");
         }
@@ -49,11 +45,9 @@ public final class BLEDeviceScanner implements BLEScanner {
 
         this.handler = new Handler();
         this.scanPeriod = periodOfScanning;
-        this.signalStrength = signalStrength;
 
-        this.scanCallback = ScannerCallBack.getScanCallBack();
-        this.scanFilter = ScannerFilter.getScanFilter();
-        this.scanSettings = ScannerSettings.getScanSettings();
+        this.scannerFilterSettings = new ScannerFilterSettings(this);
+        this.filtration = filtration;
 
         BluetoothManager manager =
                 (BluetoothManager) this.mainActivity.getSystemService(Context.BLUETOOTH_SERVICE);
@@ -64,8 +58,8 @@ public final class BLEDeviceScanner implements BLEScanner {
     public BLEDeviceScanner(final MainActivity mainActivity,
                             final int periodOfScanning,
                             final int timeout,
-                            final long signalStrength) {
-        this(mainActivity, periodOfScanning, signalStrength);
+                            final Filter filtration) {
+        this(mainActivity, periodOfScanning, filtration);
         if (timeout < 0) {
             throw new RuntimeException("Timeout must be bigger than 0...");
         }
@@ -109,6 +103,15 @@ public final class BLEDeviceScanner implements BLEScanner {
         return isScanning;
     }
 
+    @Override
+    public void handleNewDeviceFromScannerResult(ScanResult result) {
+        BLEDevice filteredDevice = filtration.filter(result);
+        if (filteredDevice != null) {
+            System.out.println("New device detected: ");
+            System.out.println(result.getDevice().getAddress() + " - " + result.getRssi());
+        }
+    }
+
     private void decideMethodOfScanningAndStart() {
         if (timeout == 0) {
             startOneTimeWithPeriod();
@@ -143,7 +146,7 @@ public final class BLEDeviceScanner implements BLEScanner {
             public void run() {
                 Toast.makeText(mainActivity.getApplicationContext(), "Stopping scanning...", Toast.LENGTH_SHORT).show();
                 isScanning = false;
-                adapter.getBluetoothLeScanner().stopScan(scanCallback);
+                adapter.getBluetoothLeScanner().stopScan(scannerFilterSettings.getScanCallback());
                 System.out.println("Stopping scanning...");
             }
         }, scanPeriod);
@@ -152,9 +155,9 @@ public final class BLEDeviceScanner implements BLEScanner {
         //Toast.makeText(mainActivity.getApplicationContext(), "Starting scanning...", Toast.LENGTH_SHORT).show();
         adapter.getBluetoothLeScanner()
                 .startScan(
-                        Collections.singletonList(this.scanFilter),
-                        this.scanSettings,
-                        scanCallback
+                        Collections.singletonList(scannerFilterSettings.getScanFilter()),
+                        scannerFilterSettings.getScanSettings(),
+                        scannerFilterSettings.getScanCallback()
                 );
         isScanning = true;
     }

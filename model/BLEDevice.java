@@ -5,14 +5,14 @@ import android.bluetooth.BluetoothDevice;
 import androidx.annotation.NonNull;
 
 /*
-* BLEDevice is combination of BluetoothDevice of android and rssi value
-* */
+ * BLEDevice is combination of BluetoothDevice of android and rssi value
+ * */
 public class BLEDevice {
 
     private final BluetoothDevice bluetoothDevice;
-    private final String rssi;
+    private final int rssi;
 
-    public BLEDevice(final BluetoothDevice bluetoothDevice, final String rssi) {
+    public BLEDevice(final BluetoothDevice bluetoothDevice, final int rssi) {
         this.bluetoothDevice = bluetoothDevice;
         this.rssi = rssi;
     }
@@ -21,7 +21,7 @@ public class BLEDevice {
         return this.bluetoothDevice.getAddress();
     }
 
-    public String getRssi() {
+    public int getRssi() {
         return rssi;
     }
 

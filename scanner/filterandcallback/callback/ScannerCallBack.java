@@ -1,21 +1,22 @@
-package am.threesmart.navio.bluetooth.scanner.callback;
+package am.threesmart.navio.bluetooth.scanner.filterandcallback.callback;
 
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 
+import am.threesmart.navio.bluetooth.scanner.BLEScanner;
+
 public class ScannerCallBack {
 
-    public static ScanCallback scanCallback = null;
+    private static ScanCallback scanCallback = null;
 
-    public static ScanCallback getScanCallBack() {
+    public static ScanCallback getScanCallBack(BLEScanner scanner) {
         if (scanCallback != null) {
             return scanCallback;
         }
         scanCallback = new ScanCallback() {
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
-                System.out.println("New device detected: ");
-                System.out.println(result.getDevice().getAddress() + " - " + result.getRssi());
+                scanner.handleNewDeviceFromScannerResult(result);
             }
         };
         return scanCallback;
